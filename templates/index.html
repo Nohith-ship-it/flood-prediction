@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flood Early Warning System</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --blue-dark:  #0a1628;
+      --blue-mid:   #0d2444;
+      --blue-light: #1a3a6b;
+      --accent:     #1E90FF;
+      --accent2:    #00bfff;
+      --danger:     #e74c3c;
+      --success:    #27ae60;
+      --warning:    #f39c12;
+      --card-bg:    rgba(255,255,255,0.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 60%, #0e2f55 100%);
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #dce8f5;
+    }
+
+    /* ── Animated rain background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        repeating-linear-gradient(
+          180deg,
+          transparent 0px, transparent 18px,
+          rgba(30,144,255,.06) 18px, rgba(30,144,255,.06) 19px
+        );
+      pointer-events: none;
+      animation: rain 3s linear infinite;
+    }
+    @keyframes rain { 0%{background-position:0 0} 100%{background-position:0 60px} }
+
+    /* ── Header ── */
+    header {
+      position: relative; z-index: 1;
+      background: rgba(10,22,40,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(30,144,255,.25);
+      padding: 22px 0 18px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem; font-weight: 800; letter-spacing: .5px;
+      color: #fff;
+      text-shadow: 0 0 30px rgba(30,144,255,.6);
+    }
+    header h1 span { color: var(--accent2); }
+    header p { color: #8db4d8; font-size: .95rem; margin-top: 4px; }
+    .badge-ai {
+      display: inline-block;
+      background: linear-gradient(90deg, #1E90FF, #00bfff);
+      color: #fff; font-size: .7rem; font-weight: 700;
+      padding: 2px 10px; border-radius: 20px;
+      letter-spacing: 1px; margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    /* ── Layout ── */
+    main { position: relative; z-index: 1; }
+    .page-wrap { max-width: 1050px; margin: 0 auto; padding: 36px 20px 60px; }
+
+    /* ── Info strip ── */
+    .info-strip {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .info-card {
+      flex: 1; min-width: 160px;
+      background: var(--card-bg);
+      border: 1px solid rgba(30,144,255,.18);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .info-card i { font-size: 1.5rem; color: var(--accent2); }
+    .info-card .ic-label { font-size: .7rem; color: #8db4d8; text-transform: uppercase; letter-spacing: .8px; }
+    .info-card .ic-val   { font-size: .95rem; font-weight: 700; color: #fff; }
+
+    /* ── Form card ── */
+    .form-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(30,144,255,.2);
+      border-radius: 18px;
+      padding: 34px 36px;
+      backdrop-filter: blur(8px);
+    }
+    .form-card h2 {
+      font-size: 1.2rem; font-weight: 700; color: #fff;
+      margin-bottom: 22px; display: flex; align-items: center; gap: 8px;
+    }
+    .form-card h2 i { color: var(--accent); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 18px;
+    }
+
+    .field-wrap label {
+      display: block;
+      font-size: .75rem; font-weight: 600; letter-spacing: .6px;
+      color: var(--accent2); text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .field-wrap input {
+      width: 100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(30,144,255,.3);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff; font-size: .95rem;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    .field-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(30,144,255,.2);
+    }
+    .field-wrap input::placeholder { color: #4a7ab5; }
+    .field-wrap .hint {
+      font-size: .68rem; color: #5a8cc0; margin-top: 4px;
+    }
+
+    .btn-predict {
+      margin-top: 28px;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(90deg, #1E90FF 0%, #00bfff 100%);
+      border: none; border-radius: 12px;
+      color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: .4px;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 18px rgba(30,144,255,.4);
+    }
+    .btn-predict:hover  { opacity: .9; transform: translateY(-1px); }
+    .btn-predict:active { transform: scale(.98); }
+    .btn-predict:disabled { opacity: .6; cursor: not-allowed; }
+
+    .btn-reset {
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid rgba(30,144,255,.35);
+      border-radius: 12px;
+      color: #8db4d8; font-size: .9rem; cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-reset:hover { background: rgba(30,144,255,.1); }
+
+    /* ── Result card ── */
+    .result-card {
+      margin-top: 28px;
+      border-radius: 18px;
+      padding: 28px 32px;
+      display: none;
+      animation: fadeSlide .4s ease;
+    }
+    @keyframes fadeSlide { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+
+    .result-card.danger  { background: rgba(231,76,60,.12);  border: 1px solid rgba(231,76,60,.5); }
+    .result-card.warning { background: rgba(243,156,18,.12); border: 1px solid rgba(243,156,18,.5); }
+    .result-card.success { background: rgba(39,174,96,.12);  border: 1px solid rgba(39,174,96,.5); }
+
+    .result-icon { font-size: 2.8rem; margin-bottom: 10px; }
+    .result-label { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .result-card.danger  .result-label { color: #e74c3c; }
+    .result-card.warning .result-label { color: #f39c12; }
+    .result-card.success .result-label { color: #27ae60; }
+
+    .result-meta { display: flex; gap: 22px; flex-wrap: wrap; margin: 14px 0; }
+    .result-meta .rm-item { display: flex; flex-direction: column; }
+    .result-meta .rm-item .rm-k { font-size: .68rem; color: #8db4d8; text-transform: uppercase; letter-spacing: .8px; }
+    .result-meta .rm-item .rm-v { font-size: 1rem; font-weight: 700; color: #fff; }
+
+    .result-advice {
+      font-size: .9rem; color: #b0cce8;
+      background: rgba(255,255,255,.05);
+      border-radius: 10px; padding: 12px 16px;
+      border-left: 3px solid currentColor;
+      margin-top: 8px;
+    }
+    .result-card.danger  .result-advice { border-color: #e74c3c; }
+    .result-card.warning .result-advice { border-color: #f39c12; }
+    .result-card.success .result-advice { border-color: #27ae60; }
+
+    /* ── Probability bar ── */
+    .prob-bar-wrap { margin-top: 14px; }
+    .prob-bar-wrap label { font-size: .75rem; color: #8db4d8; margin-bottom: 4px; display: block; }
+    .prob-bar-bg {
+      background: rgba(255,255,255,.1);
+      border-radius: 20px; height: 10px; overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%; border-radius: 20px;
+      transition: width 1s ease;
+    }
+    .danger  .prob-bar-fill { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+    .warning .prob-bar-fill { background: linear-gradient(90deg, #d35400, #f39c12); }
+    .success .prob-bar-fill { background: linear-gradient(90deg, #1e8449, #27ae60); }
+
+    /* ── Spinner ── */
+    .spinner { display: none; text-align: center; padding: 20px 0; }
+    .spinner i { font-size: 2rem; color: var(--accent); animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-box {
+      display: none; margin-top: 16px;
+      background: rgba(231,76,60,.1); border: 1px solid rgba(231,76,60,.4);
+      border-radius: 12px; padding: 14px 18px; color: #e74c3c; font-size: .9rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 16px;
+      color: #3a6090; font-size: .8rem;
+      border-top: 1px solid rgba(30,144,255,.1);
+    }
+
+    @media (max-width: 600px) {
+      .form-card { padding: 22px 18px; }
+      header h1  { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+  <h1>
+    <i class="fa-solid fa-water" style="color:#1E90FF;margin-right:10px;"></i>
+    Flood <span>Early Warning</span> System
+    <span class="badge-ai">ML POWERED</span>
+  </h1>
+  <p>Real-time flood risk prediction using XGBoost · Trained on historical meteorological data</p>
+</header>
+
+<main>
+<div class="page-wrap">
+
+  <!-- ── Info Strip ── -->
+  <div class="info-strip">
+    <div class="info-card">
+      <i class="fa-solid fa-brain"></i>
+      <div>
+        <div class="ic-label">Algorithm</div>
+        <div class="ic-val">XGBoost</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <i class="fa-solid fa-chart-line"></i>
+      <div>
+        <div class="ic-label">Model Accuracy</div>
+        <div class="ic-val">96.55%</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <i class="fa-solid fa-database"></i>
+      <div>
+        <div class="ic-label">Training Records</div>
+        <div class="ic-val">2,500 years</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <i class="fa-solid fa-shield-halved"></i>
+      <div>
+        <div class="ic-label">ROC-AUC</div>
+        <div class="ic-val">≥ 0.99</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Form Card ── -->
+  <div class="form-card">
+    <h2><i class="fa-solid fa-sliders"></i> Enter Weather Parameters</h2>
+
+    <div class="form-grid">
+
+      <div class="field-wrap">
+        <label>Annual Rainfall (mm)</label>
+        <input type="number" id="ANNUAL" placeholder="e.g. 1250" step="0.1" min="0" />
+        <div class="hint">Total yearly rainfall</div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Jan–Feb Rainfall (mm)</label>
+        <input type="number" id="Jan_Feb" placeholder="e.g. 50" step="0.1" min="0" />
+        <div class="hint">Winter season total</div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Mar–May Rainfall (mm)</label>
+        <input type="number" id="Mar_May" placeholder="e.g. 120" step="0.1" min="0" />
+        <div class="hint">Pre-monsoon total</div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Jun–Sep Rainfall (mm)</label>
+        <input type="number" id="Jun_Sep" placeholder="e.g. 900" step="0.1" min="0" />
+        <div class="hint">Monsoon season total</div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Oct–Dec Rainfall (mm)</label>
+        <input type="number" id="Oct_Dec" placeholder="e.g. 140" step="0.1" min="0" />
+        <div class="hint">Post-monsoon total</div>
+      </div>
+
+      <div class="field-wrap">
+        <label>Year</label>
+        <input type="number" id="YEAR" placeholder="e.g. 2024" step="1" min="1900" max="2100" />
+        <div class="hint">Observation year</div>
+      </div>
+
+    </div>
+
+    <button class="btn-predict" id="predictBtn" onclick="runPrediction()">
+      <i class="fa-solid fa-bolt"></i>&nbsp; Predict Flood Risk
+    </button>
+    <button class="btn-reset" onclick="resetForm()">
+      <i class="fa-solid fa-rotate-left"></i>&nbsp; Reset
+    </button>
+
+    <!-- Spinner -->
+    <div class="spinner" id="spinner">
+      <i class="fa-solid fa-circle-notch"></i>
+      <p style="color:#5a8cc0;margin-top:8px;font-size:.85rem;">Analysing weather data…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox">
+      <i class="fa-solid fa-circle-exclamation"></i>&nbsp; <span id="errorMsg"></span>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+      <div class="result-icon" id="resultIcon"></div>
+      <div class="result-label" id="resultLabel"></div>
+
+      <div class="result-meta" id="resultMeta"></div>
+
+      <div class="prob-bar-wrap">
+        <label>Flood Probability</label>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" id="probBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="result-advice" id="resultAdvice"></div>
+    </div>
+  </div><!-- /form-card -->
+
+</div>
+</main>
+
+<footer>
+  Flood Early Warning System &nbsp;|&nbsp; ML-Powered by XGBoost &nbsp;|&nbsp;
+  Designed for IBM Cloud Deployment
+</footer>
+
+<script>
+async function runPrediction() {
+  const fields = ['ANNUAL','Jan_Feb','Mar_May','Jun_Sep','Oct_Dec','YEAR'];
+  const labels = ['Annual Rainfall','Jan–Feb','Mar–May','Jun–Sep','Oct–Dec','Year'];
+
+  // Validate
+  for (let i = 0; i < fields.length; i++) {
+    const val = document.getElementById(fields[i]).value.trim();
+    if (val === '') {
+      showError(`Please enter a value for: ${labels[i]}`);
+      document.getElementById(fields[i]).focus();
+      return;
+    }
+  }
+
+  const payload = {};
+  fields.forEach(f => { payload[f] = parseFloat(document.getElementById(f).value); });
+
+  // UI state
+  document.getElementById('predictBtn').disabled = true;
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('errorBox').style.display   = 'none';
+
+  try {
+    const resp = await fetch('http://192.168.29.231:5000/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+
+    if (data.error) { showError(data.error); return; }
+
+    displayResult(data);
+  } catch(err) {
+    showError('Network error — is the Flask server running?');
+  } finally {
+    document.getElementById('predictBtn').disabled = false;
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
+
+function displayResult(d) {
+  const card = document.getElementById('resultCard');
+  const icons = { danger: '🌊', warning: '⚠️', success: '✅' };
+
+  card.className = `result-card ${d.color}`;
+  document.getElementById('resultIcon').textContent  = icons[d.color] || '📊';
+  document.getElementById('resultLabel').textContent = d.label;
+
+  document.getElementById('resultMeta').innerHTML = `
+    <div class="rm-item"><span class="rm-k">Risk Level</span>   <span class="rm-v">${d.risk_level}</span></div>
+    <div class="rm-item"><span class="rm-k">Flood Probability</span><span class="rm-v">${d.flood_prob}</span></div>
+    <div class="rm-item"><span class="rm-k">Model Confidence</span><span class="rm-v">${d.confidence}</span></div>
+  `;
+
+  // Animate probability bar
+  const probVal = parseFloat(d.flood_prob);
+  setTimeout(() => {
+    document.getElementById('probBar').style.width = probVal + '%';
+  }, 100);
+
+  document.getElementById('resultAdvice').textContent = d.advice;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorBox').style.display = 'block';
+  document.getElementById('spinner').style.display  = 'none';
+  document.getElementById('predictBtn').disabled = false;
+}
+
+function resetForm() {
+  ['ANNUAL','Jan_Feb','Mar_May','Jun_Sep','Oct_Dec','YEAR'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('errorBox').style.display   = 'none';
+  document.getElementById('probBar').style.width = '0%';
+}
+</script>
+
+</body>
+</html>
