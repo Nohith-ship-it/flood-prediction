@@ -7,6 +7,6 @@ dist/
 build/
 .env
 .DS_Store
-*.pkl
+# *.pkl
 .ipynb_checkpoints/
 node_modules/
