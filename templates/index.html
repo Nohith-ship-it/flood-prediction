@@ -397,7 +397,7 @@ async function runPrediction() {
   document.getElementById('errorBox').style.display   = 'none';
 
   try {
-    const resp = await fetch('http://192.168.29.231:5000/predict', {
+    const resp = await fetch('/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
