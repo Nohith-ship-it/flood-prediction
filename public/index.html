@@ -372,8 +372,26 @@
   Designed for IBM Cloud Deployment
 </footer>
 
-<script>
-async function runPrediction() {
+<script type="module">
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBySu2ACiQDCZRYqZdK0J3h-GxvzYZ2Ibw",
+  authDomain: "raising-waters.firebaseapp.com",
+  projectId: "raising-waters",
+  storageBucket: "raising-waters.firebasestorage.app",
+  messagingSenderId: "976759863167",
+  appId: "1:976759863167:web:1b3c316b0b704898728c4a",
+  measurementId: "G-5HMS5D0M1V"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+window.runPrediction = async function() {
   const fields = ['ANNUAL','Jan_Feb','Mar_May','Jun_Sep','Oct_Dec','YEAR'];
   const labels = ['Annual Rainfall','Jan–Feb','Mar–May','Jun–Sep','Oct–Dec','Year'];
 
@@ -397,18 +415,21 @@ async function runPrediction() {
   document.getElementById('errorBox').style.display   = 'none';
 
   try {
-    const resp = await fetch('https://cactus-drizzle-finance.ngrok-free.dev/predict', {
+    const resp = await fetch('https://flood-prediction-api.onrender.com/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await resp.json();
 
-    if (data.error) { showError(data.error); return; }
+    if (data.error || !resp.ok) { 
+      showError(data.error || 'Prediction failed'); 
+      return; 
+    }
 
     displayResult(data);
   } catch(err) {
-    showError('Network error — is the Flask server running?');
+    showError('Network error — unable to reach the prediction service.');
   } finally {
     document.getElementById('predictBtn').disabled = false;
     document.getElementById('spinner').style.display = 'none';
@@ -440,14 +461,14 @@ function displayResult(d) {
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function showError(msg) {
+window.showError = function(msg) {
   document.getElementById('errorMsg').textContent = msg;
   document.getElementById('errorBox').style.display = 'block';
   document.getElementById('spinner').style.display  = 'none';
   document.getElementById('predictBtn').disabled = false;
 }
 
-function resetForm() {
+window.resetForm = function() {
   ['ANNUAL','Jan_Feb','Mar_May','Jun_Sep','Oct_Dec','YEAR'].forEach(id => {
     document.getElementById(id).value = '';
   });
